@@ -41,9 +41,28 @@ proquest_dt <- read_csv("screening_data/proquest_df.csv") %>%
                       abstract
                       )
 
+
+psycinfo_dt <- 
+    bind_rows(
+        read_csv("screening_data/psycinfo_journals_raw.csv"),
+        read_csv("screening_data/psycinfo_books_raw.csv")
+    ) %>% 
+    select(source,
+           psyid,
+           doi,
+           pmid,
+           title,
+           journal,
+           year,
+           authors,
+           abstract
+    )
+    
+
+
+
 anderson2010 <- read_csv("screening_data/anderson2010.csv")
 nagy2015 <- read_csv("screening_data/nagy2015.csv")    
-
 
 # Merging and duplicate removal -------------------------------------------
 # Removing duplicates based on title, doi, pmid
@@ -51,6 +70,7 @@ merged_records <-
     bind_rows(scopus, 
               pubmed, 
               proquest_dt, 
+              psycinfo_dt,
               anderson2010,
               nagy2015) %>% 
     mutate(title = title %>% str_to_title()) %>% 
@@ -61,14 +81,13 @@ merged_records <-
            ) %>%
     arrange(title)
     
-
 # Create an identifier hierarchy and keep only the best --------------------
 id_hierarchy <- tibble(identifier = c("doi","pmid","psyid","eid","pq_id","no_id"),
                        id_rank = c(1, 2, 3, 4, 5, 6))
 
 clean_records <-
     merged_records %>% 
-    gather(identifier, id, c(doi:eid, pq_id, no_id)) %>%
+    gather(identifier, id, id_hierarchy$identifier) %>%
     drop_na(id) %>% 
     left_join(id_hierarchy, by = "identifier") %>% 
     group_by(title) %>%
