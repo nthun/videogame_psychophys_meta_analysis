@@ -14,7 +14,7 @@ scopus <- read_csv("screening_data/scopus_raw.csv") %>%
            authors = Authors,
            year = Year,
            abstract = Abstract,
-           language = `Language of Original Document`,
+           # language = `Language of Original Document`,
            type = `Document Type`
            )
 
@@ -42,17 +42,38 @@ proquest_dt <- read_csv("screening_data/proquest_df.csv") %>%
                       )
 
 anderson2010 <- read_csv("screening_data/anderson2010.csv")
+nagy2015 <- read_csv("screening_data/nagy2015.csv")    
 
+
+# Merging and duplicate removal -------------------------------------------
 # Removing duplicates based on title, doi, pmid
 merged_records <-
     bind_rows(scopus, 
               pubmed, 
               proquest_dt, 
-              anderson2010) %>% 
+              anderson2010,
+              nagy2015) %>% 
     mutate(title = title %>% str_to_title()) %>% 
     filter(!(
             duplicated(doi, incomparables = NA) |
             duplicated(pmid, incomparables = NA) |
-            duplicated(title, incomparables = NA))) %>%
+            duplicated(title, incomparables = NA))
+           ) %>%
     arrange(title)
     
+
+# Create an identifier hierarchy and keep only the best --------------------
+id_hierarchy <- tibble(identifier = c("doi","pmid","psyid","eid","pq_id","no_id"),
+                       id_rank = c(1, 2, 3, 4, 5, 6))
+
+clean_records <-
+    merged_records %>% 
+    gather(identifier, id, c(doi:eid, pq_id, no_id)) %>%
+    drop_na(id) %>% 
+    left_join(id_hierarchy, by = "identifier") %>% 
+    group_by(title) %>%
+    mutate(best_id = min(id_rank)) %>% 
+    ungroup() %>%
+    filter(id_rank == best_id) %>% 
+    select(-id_rank, -best_id) %>% 
+    select(identifier, id, source, everything())
