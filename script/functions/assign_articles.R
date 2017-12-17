@@ -1,13 +1,14 @@
-# Assign articles to raters reproducibly
+# Assign articles to raters reproducibly in a team that can have members with different workload
 # INPUT: df: a data frame of articles
 #        team: a data.frame of team members with name<chr>, and effort <dbl>:0-1 variables
 #        seed: a random seed <int> for reproducibility
 # OUTPUT: a data frame that contains the article info and the assigned reviewers
 # EXAMPLE: assign_articles(merged_articles, team, 1)
-
-library(tidyverse)
+# TODO: Feature: Possibility to assign an article to more than two reviewers
+library(tidyr)
+library(dplyr)
 library(glue)
-assign_articles <- function(df, team_df, seed){
+assign_articles <- function(df, team_df, seed = 1){
     stopifnot(has_name(df, c("title", "abstract")),
               is.numeric(seed))
     
