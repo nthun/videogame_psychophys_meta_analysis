@@ -10,11 +10,17 @@ library(dplyr)
 source("script/functions/assign_articles.R")
 
 add_articles <- function(old_article_df, new_article_df, team_df, seed = 1){
-        bind_rows(old_article_df, new_article_df) %>% 
+    # The work-in-progress files are in duplicate, so duplicates should be removed first
+    old_single <- 
+        old_article_df %>% 
+        filter(!(duplicated(id, incomparables = NA) |
+                     duplicated(title, incomparables = NA)))
+    # Then remove the overlap between the old and new articles
+    bind_rows(old_single, new_article_df) %>% 
         filter(!(duplicated(id, incomparables = NA) |
                      duplicated(title, incomparables = NA))) %>% 
         # Keep only the new articles after removing all duplicates
-        anti_join(old_article_df, by = c("title","id")) %>% 
+        anti_join(old_single, by = c("title","id")) %>% 
         # Remove position and name that came with the old df
         select(-one_of("position", "name")) %>% 
         # Assign new reviewers based on the team_df
@@ -24,3 +30,6 @@ add_articles <- function(old_article_df, new_article_df, team_df, seed = 1){
         group_by(reviewer) %>% 
         nest()
 }
+# Possible bug!
+# THe old df contains the records in duplicate for a reason, so not all duplicates should be removed
+
