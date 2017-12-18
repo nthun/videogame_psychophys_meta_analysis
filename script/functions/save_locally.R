@@ -16,6 +16,6 @@ save_locally <- function(df, save_dir = NA_character_, overwrite = FALSE){
     if (dir.exists(save_dir) & overwrite == TRUE) dir.create(save_dir)
     if (!dir.exists(save_dir)) dir.create(save_dir)
     # Save the screening filess
-    walk2(df_nested$reviewer, df_nested$data, ~write_csv(.y, glue("{dir}/{.x}_articles.csv"), na = ""))
+    walk2(df_nested$reviewer, df_nested$data, ~write_excel_csv(.y, glue("{dir}/{.x}_articles.csv"), na = ""))
     glue("{nrow(df_nested)} files saved in {dir}")
 }
