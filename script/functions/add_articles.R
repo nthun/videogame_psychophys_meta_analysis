@@ -26,9 +26,7 @@ add_articles <- function(old_article_df, new_article_df, team_df, seed = 1){
         # Assign new reviewers based on the team_df
         assign_articles(team_df, seed) %>% 
         # Add the old literature on the top, but first, re-add the reviewer column for nesting
-        bind_rows(old_article_df %>% mutate(reviewer = name), .) %>% 
-        group_by(reviewer) %>% 
-        nest()
+        bind_rows(old_article_df %>% mutate(reviewer = name), .)
 }
 # Possible bug!
 # THe old df contains the records in duplicate for a reason, so not all duplicates should be removed
