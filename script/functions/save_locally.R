@@ -5,9 +5,9 @@
 save_locally <- function(df, save_dir = NA_character_, overwrite = FALSE){
     # Checking predicaments
     stopifnot(has_name(df, "reviewer"),
-              is.na(save_dir),
-              dir.exists(save_dir) & overwrite == FALSE)
-    
+              !is.na(save_dir),
+              !(dir.exists(save_dir) & overwrite == FALSE))
+    # Create a nested tibble 
     df_nested <- 
         df %>% 
         group_by(reviewer) %>% 
