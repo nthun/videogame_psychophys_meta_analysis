@@ -4,6 +4,7 @@
 #        tempdir: the directory where the files should be downloaded
 # OUTPUT: a data frame that contains all work-in-progress screening data for all team members
 # EXAMPLE: get_screening_sheets(sheets)
+# TODO: Add error handling
 library(dplyr)
 library(purrr)
 library(googlesheets)

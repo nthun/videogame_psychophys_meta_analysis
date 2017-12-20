@@ -4,6 +4,7 @@
 #        team_df: the team file that contains name<chr>, and effort<int> variables to be used when assigning the new articles
 #        seed: random seed to use to make the assignment reproducible
 # OUTPUT: a data frame containing nested data frames for each revier with updated data
+# TODO: Add error handling
 # EXAMPLE: add_articles(old_articles, psycinfo_df, team, 1)
 library(tidyr)
 library(dplyr)
