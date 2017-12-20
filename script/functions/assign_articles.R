@@ -10,7 +10,8 @@ library(dplyr)
 library(glue)
 assign_articles <- function(df, team_df, seed = 1){
     stopifnot(has_name(df, c("title", "abstract")),
-              is.numeric(seed))
+              is.numeric(seed),
+              sum(team_df$effort) == 1)
     
     # Make distribution reproducible
     set.seed(seed)
@@ -29,4 +30,3 @@ assign_articles <- function(df, team_df, seed = 1){
         mutate(name = reviewer) %>%
         ungroup()
 }
-
