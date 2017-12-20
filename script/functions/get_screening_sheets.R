@@ -10,26 +10,27 @@ library(googlesheets)
 
 get_screening_sheets <-
     function(sheet_names,
+             sheet_keys,
              google_auth_key = ".httr-oauth",
-             tempdir = "temp_gs",
+             temp_dir = "temp_gs",
              keep_temp = FALSE){
         
     gs_auth(cache = google_auth_key)
     # If temp dir exists, remove, and recreate
-    if (dir.exists(tempdir)) unlink(tempdir, recursive = TRUE)
-    dir.create(tempdir)
+    if (dir.exists(temp_dir)) unlink(temp_dir, recursive = TRUE)
+    dir.create(temp_dir)
     # Download all work-in-progress google sheets
-    for (i in sheet_names){
-        gs_title(i) %>% 
-        gs_download(ws = 1,to = paste(tempdir, i, sep = "/"), overwrite = TRUE)
+    for (i in seq_along(sheet_names)) {
+        gs_key(sheet_keys[i]) %>% 
+        gs_download(ws = 1, to = paste(temp_dir, sheet_names[i], sep = "/"), overwrite = TRUE)
     }
     # Read all downloaded files and bind them together
-    output <- map(list.files(tempdir, "_articles.csv"),
-        ~read_csv(paste0(tempdir(), "/",.x)) %>% 
+    output <- map(list.files(temp_dir, "_articles.csv"),
+        ~read_csv(paste0(temp_dir, "/",.x)) %>% 
             mutate(decision = as.character(decision) %>% trimws()),
                    reason = reason %>% trimws()) %>% 
         bind_rows()
     # Remove temporary directory if keep == FALSE
-    if (keep == FALSE) unlink(tempdir, recursive = TRUE)
+    if (keep_temp == FALSE) unlink(temp_dir, recursive = TRUE)
     output    
 }
