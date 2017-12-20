@@ -15,13 +15,18 @@ make_id <- function(df, id_hierarchy = id_hierarchy){
                   length() > 0) 
     
     df %>% 
+        # Gather all available identifiers
         gather(identifier, id, intersect(names(.), id_hierarchy$identifier)) %>%
         drop_na(id) %>% 
+        # Get information about the rank of the identifier
         left_join(id_hierarchy, by = "identifier") %>% 
         group_by(title) %>%
+        # Find the best available identifier for the article
         mutate(best_id = min(id_rank)) %>% 
         ungroup() %>%
+        # Remove all identifiers that are less important
         filter(id_rank == best_id) %>% 
+        # Remove clutter and rearrange variables
         select(-id_rank, -best_id) %>% 
         select(identifier, id, source, everything())
 }
