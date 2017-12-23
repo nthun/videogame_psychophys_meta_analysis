@@ -12,7 +12,7 @@ rearrange_to_train <- function(articles, team_df){
     
     articles <-
         articles %>% 
-        left_join(team_df, by = c("name"))
+        left_join(team_df %>% select("name","role"), by = c("name"))
     
     # Get articles that the trainees already screened
     trainee_decided <-
@@ -32,7 +32,9 @@ rearrange_to_train <- function(articles, team_df){
     # Return the original articles, but for trainers, the articles that were screened by trainees will get on top (after the records they already screened)
     articles %>% 
         filter(role != "trainer") %>% 
-        bind_rows(trainer_check)
+        bind_rows(trainer_check) %>% 
+        mutate(reviewer = name) %>% 
+        select(-role)
 }
 
 
