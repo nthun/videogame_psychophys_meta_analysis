@@ -10,6 +10,10 @@ rearrange_to_train <- function(articles, team_df){
     stopifnot(has_name(team_df, c("name","role")),
               has_name(articles, c("id","name","title","decision")))
     
+    articles <-
+        articles %>% 
+        left_join(team_df, by = c("name"))
+    
     # Get articles that the trainees already screened
     trainee_decided <-
         articles %>% 
