@@ -26,15 +26,14 @@ rearrange_to_train <- function(articles, team_df){
         filter(role == "trainer") %>% 
         # Create a new variable for the articles already screened by the trainees (and the trainer also got it for screening)
         mutate(check_first = id %in% unique(trainee_decided$id)) %>% 
-        arrange(decision, -check_first, title) %>% 
-        select(-check_first)
+        arrange(decision, -check_first, title)
     
     # Return the original articles, but for trainers, the articles that were screened by trainees will get on top (after the records they already screened)
     articles %>% 
         filter(role != "trainer") %>% 
         bind_rows(trainer_check) %>% 
         mutate(reviewer = name) %>% 
-        select(-role)
+        select(-role, -check_first)
 }
 
 
