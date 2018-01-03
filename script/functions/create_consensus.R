@@ -6,7 +6,8 @@ library(dplyr)
 library(tidyr)
 library(purrr)
 
-create_consensus <- function(artciles){
+create_consensus <- function(articles){
+    stopifnot(has_name(articles, c("name","decision","reason", "title","abstract")))
     name_pairs <- 
         articles %>% 
         distinct(name) %>% 
