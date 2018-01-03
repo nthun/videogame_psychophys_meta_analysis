@@ -2,6 +2,7 @@
 # iNPUT: articles: a dataset that contains the screened articles, and having a name<chr> column
 # OUTPUT: A nested data frame containing the mutual records for all pairs of screning team members
 # EXAMPLE: create_consensus(articles)
+# TODO: Return unnested data frames?
 library(dplyr)
 library(tidyr)
 library(purrr)
@@ -9,6 +10,7 @@ library(tibble)
 
 create_consensus <- function(articles){
     stopifnot(has_name(articles, c("name","decision","reason", "title","abstract")))
+    # Create a nested dataframe from all unrepeated combinations of names
     name_pairs <- 
         articles %>% 
         distinct(name) %>% 
@@ -21,8 +23,10 @@ create_consensus <- function(articles){
         group_by(name_pair) %>% 
         nest()
     
+    # Suppress the joining by ... message
     suppressMessages(
         name_pairs %>% 
+        # Create tables for decision and reason separately
         mutate(decision_table = map(data, 
                                     ~ articles %>% 
                                         drop_na(decision) %>%
@@ -38,6 +42,7 @@ create_consensus <- function(articles){
                                       filter(name %in% (.x %>% c())) %>% 
                                       spread(name, reason, sep = "_") %>% 
                                       set_names(str_replace(names(.), "name", "reason")))) %>% 
+        # Join the two datasets, and reorder the columns for ease of use. Remove unnecesary columns
         transmute(
             name_pair, 
             consensus_table = map2(decision_table, reason_table, 
