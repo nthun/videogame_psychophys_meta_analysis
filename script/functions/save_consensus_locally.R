@@ -3,12 +3,13 @@
 # OUTPUT: No output, only side effect (saved files in the folder)
 # EXAMPLE: save_locally(consensus_tables, "consensus_tables")
 # TODO: Change to work on unnested tables?
+# TODO: Add automatic correction of the reason column?
 library(dplyr)
 library(tidyr)
 
 save_consensus_locally <- function(consensus_tables, dir = NA_character_, overwrite = FALSE){
     # Checking predicaments
-    stopifnot(has_name(consensus_tables, "reviewer"),
+    stopifnot(has_name(consensus_tables, c("name_pair", "consensus_table")),
               !is.na(dir),
               !(dir.exists(dir) & overwrite == FALSE))
    # Create the directory
