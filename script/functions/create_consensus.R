@@ -21,6 +21,7 @@ create_consensus <- function(articles){
         group_by(name_pair) %>% 
         nest()
     
+    suppressMessages(
         name_pairs %>% 
         mutate(decision_table = map(data, 
                                     ~ articles %>% 
@@ -44,6 +45,7 @@ create_consensus <- function(articles){
                                        select(contains("decision"), contains("reason"), title, abstract, everything())
             )
         )
+    )
 }
 
 
