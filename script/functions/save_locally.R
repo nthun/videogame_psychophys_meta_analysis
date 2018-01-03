@@ -3,9 +3,7 @@
 # OUTPUT: No output, only side effect (saved files in the folder)
 # EXAMPLE: save_locally(assigned_articles, "screening")
 library(dplyr)
-library(readr)
 library(tidyr)
-library(glue)
 
 save_locally <- function(df, dir = NA_character_, overwrite = FALSE){
     # Checking predicaments
@@ -21,6 +19,6 @@ save_locally <- function(df, dir = NA_character_, overwrite = FALSE){
     if (dir.exists(dir) & overwrite == TRUE) unlink(dir, recursive = TRUE)
     dir.create(dir)
     # Save the screening filess
-    walk2(df_nested$reviewer, df_nested$data, ~write_excel_csv(.y, glue("{dir}/{.x}_articles.csv"), na = ""))
-    glue("{nrow(df_nested)} files saved in {dir}")
+    purrr::walk2(df_nested$reviewer, df_nested$data, ~readr::write_excel_csv(.y, glue::glue("{dir}/{.x}_articles.csv"), na = ""))
+    glue::glue("{nrow(df_nested)} files saved in {dir}")
 }
