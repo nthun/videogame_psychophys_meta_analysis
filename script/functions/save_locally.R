@@ -4,6 +4,7 @@
 # EXAMPLE: save_locally(assigned_articles, "screening")
 library(dplyr)
 library(tidyr)
+library(tibble)
 
 save_locally <- function(df, dir = NA_character_, overwrite = FALSE){
     # Checking predicaments

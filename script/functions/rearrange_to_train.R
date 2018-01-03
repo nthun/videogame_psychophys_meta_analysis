@@ -5,6 +5,7 @@
 # TODO: currently it can only accomodate one trainer
 library(dplyr)
 library(tidyr)
+library(tibble)
 
 rearrange_to_train <- function(articles, team_df){
     stopifnot(has_name(team_df, c("name","role")),

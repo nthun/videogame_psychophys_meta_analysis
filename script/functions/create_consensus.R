@@ -5,6 +5,7 @@
 library(dplyr)
 library(tidyr)
 library(purrr)
+library(tibble)
 
 create_consensus <- function(articles){
     stopifnot(has_name(articles, c("name","decision","reason", "title","abstract")))

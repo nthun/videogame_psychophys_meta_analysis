@@ -6,6 +6,7 @@
 # TODO: Add automatic correction of the reason column?
 library(dplyr)
 library(tidyr)
+library(tibble)
 
 save_consensus_locally <- function(consensus_tables, dir = NA_character_, overwrite = FALSE){
     # Checking predicaments

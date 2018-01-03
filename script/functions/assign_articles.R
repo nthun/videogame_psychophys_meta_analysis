@@ -8,6 +8,8 @@
 library(tidyr)
 library(dplyr)
 library(glue)
+library(tibble)
+
 assign_articles <- function(articles, team_df, seed = 1){
     stopifnot(has_name(articles, c("title", "abstract")),
               has_name(new_team_df, c("name","effort")),

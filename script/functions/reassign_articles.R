@@ -4,6 +4,7 @@
 # EXAMPLE: reassign_articles(old_sheets, new_team_df, 1) 
 library(dplyr)
 library(tidyr)
+library(tibble)
 source("script/functions/assign_articles.R")
 
 reassign_articles <- function(screening_df, new_team_df, seed = 1){

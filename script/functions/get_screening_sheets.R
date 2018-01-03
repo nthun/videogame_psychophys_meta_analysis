@@ -27,7 +27,7 @@ get_screening_sheets <-
     }
     # Read all downloaded files and bind them together
     output <- map(list.files(temp_dir, "_articles.csv"),
-        ~read_csv(paste0(temp_dir, "/",.x)) %>% 
+        ~readr::read_csv(paste0(temp_dir, "/",.x)) %>% 
             mutate(decision = as.character(decision) %>% trimws()),
                    reason = reason %>% trimws()) %>% 
         bind_rows()
