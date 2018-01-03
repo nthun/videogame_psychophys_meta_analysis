@@ -8,7 +8,7 @@ library(dplyr)
 id_hierarchy <- tibble(identifier = c("doi","pmid","psyid","eid","pq_id","no_id"),
                        id_rank = c(1, 2, 3, 4, 5, 6))
 
-make_id <- function(df, id_hierarchy = id_hierarchy){
+make_id <- function(df, .id_hierarchy = id_hierarchy){
     # Stop if there are no valid identifiers in the data frame
     stopifnot(names(df) %>% 
                   intersect(id_hierarchy$identifier) %>% 
