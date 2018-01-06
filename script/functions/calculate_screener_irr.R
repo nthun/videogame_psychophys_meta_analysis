@@ -1,4 +1,4 @@
-# Calculate Krippendorff's alpha for all reviewer pairs
+# Calculate agreement summaries and Krippendorff's alpha for all reviewer pairs
 # iNPUT: articles: a dataset that contains the screened articles, and having a name<chr> column
 # OUTPUT: A data frame containing the Krippendorff's alpha value for all pairs of screeners. invalid_decision<int> is the total number of decisions that are not 1 or 0
 # EXAMPLE: calculate_screener_irr(articles)
@@ -24,7 +24,7 @@ calculate_screener_irr <- function(articles){
         mutate(name_pair = paste(name1, name2, sep = "_")) %>% 
         group_by(name_pair) %>% 
         nest(.key = name_df)
-temp <-
+
     name_pairs %>%
         # Create tables for decision and reason separately
         mutate(
@@ -43,6 +43,7 @@ temp <-
         # Calculate the Krippendorff's alpha for all pairs
         transmute(
             name_pair,
+            # Create tidy Krippendorff's alpha output tables for all pairs
             irr = map(
                 decision_table,
                 ~ .x %>%
@@ -53,8 +54,21 @@ temp <-
                     kripp.alpha %>%
                     tidy_kripp() %>% 
                     as_data_frame()),
-            invalid_decision = 
-                       map_int(decision_table, 
+            # Create summary statistics for all pairs
+            include_both = map_int(decision_table, 
+                                   ~select(.x, starts_with("decision")) %>% 
+                                       filter(.[[1]] == 1 & .[[2]] == 1) %>% 
+                                       nrow()),
+            exclude_both = map_int(decision_table, 
+                                   ~select(.x, starts_with("decision")) %>% 
+                                       filter(.[[1]] == 0 & .[[2]] == 0) %>% 
+                                       nrow()),
+            no_agreement = map_int(decision_table, 
+                                   ~select(.x, starts_with("decision")) %>% 
+                                       filter(.[[1]] != .[[2]]) %>% 
+                                       nrow()),  
+            # The number of all invalid decisions for both screeners of the pair summarised
+            invalid_decision = map_int(decision_table, 
                                ~select(.x, starts_with("decision")) %>%
                                    c(recursive = TRUE) %>% 
                                    str_detect("1|0") %>% 
@@ -65,3 +79,6 @@ temp <-
     unnest(irr)
 }
 
+
+temp 
+    
