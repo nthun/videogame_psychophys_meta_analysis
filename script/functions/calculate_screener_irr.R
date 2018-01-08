@@ -9,7 +9,7 @@ library(tibble)
 library(irr)
 source("script/functions/tidy_kripp.R")
 
-calculate_screener_irr <- function(articles){
+calculate_screener_irr <- function(articles, kr_method = "nominal"){
     stopifnot(has_name(articles, c("name","decision")))
     
     # Create a nested dataframe from all unrepeated combinations of names
@@ -53,7 +53,7 @@ calculate_screener_irr <- function(articles){
                         mutate_all(as.numeric) %>%
                         drop_na() %>%
                         t() %>%
-                        kripp.alpha %>%
+                        kripp.alpha(method = kr_method) %>%
                         tidy_kripp() %>% 
                         as_data_frame()),
                 # Create summary statistics for all pairs
