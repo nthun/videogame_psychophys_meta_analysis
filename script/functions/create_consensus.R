@@ -34,7 +34,9 @@ create_consensus <- function(articles){
                                         filter(name %in% (.x %>% c())) %>% 
                                         spread(name, decision, sep = "_") %>% 
                                         set_names(str_replace(names(.), "name", "decision")) %>% 
-                                        drop_na(contains("decision"))),
+                                        drop_na(contains("decision")) %>% 
+                                        select(contains("decision"), everything()) %>% 
+                                        mutate(no_agreement = .[[1]] != .[[2]])),
                reason_table = map(data, 
                                   ~ articles %>% 
                                       drop_na(decision) %>%
@@ -47,7 +49,7 @@ create_consensus <- function(articles){
             name_pair, 
             consensus_table = map2(decision_table, reason_table, 
                                    ~ left_join(.x, .y) %>% 
-                                       select(contains("decision"), contains("reason"), title, abstract, everything())
+                                       select(contains("decision"), contains("reason"), no_agreement, title, abstract, everything())
             )
         )
     )
