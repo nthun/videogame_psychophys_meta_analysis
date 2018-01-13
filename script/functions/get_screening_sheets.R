@@ -5,6 +5,7 @@
 # OUTPUT: a data frame that contains all work-in-progress screening data for all team members
 # EXAMPLE: get_screening_sheets(sheets)
 # TODO: Add error handling
+# TODO: Use either the current sheet_names and sheet_keys, or a complete team_df
 library(dplyr)
 library(purrr)
 library(googlesheets)

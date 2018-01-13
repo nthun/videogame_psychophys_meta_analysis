@@ -1,5 +1,5 @@
 # Correct reasons for pre-defined reason names. This is a wrapper for stringdist, where certain parameters are preset, and can be used easily in a tidyverse pipe. Using cosine matching to disregard word order.
-# INPUT: to_be_corrected <str>: vector containing the strings to be corrected, correct_terms <chr>: a vector containing the correct terms that should.
+# INPUT: to_be_corrected <str>: vector containing the strings to be corrected, correct_terms <chr>: a vector containing the correct terms.
 # OUTPUT: a corrected string vector that can only contain the correct terms
 # EXAMPLE: articles %>% mutate(correct_reason = correct_categories(reason, read_lines("vg-meta-reasons.txt")))
 
