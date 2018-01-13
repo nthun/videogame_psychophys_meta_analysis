@@ -49,7 +49,8 @@ create_consensus <- function(articles){
             name_pair, 
             consensus_table = map2(decision_table, reason_table, 
                                    ~ left_join(.x, .y) %>% 
-                                       select(contains("decision"), contains("reason"), no_agreement, title, abstract, everything())
+                                       mutate(consensus = if_else(no_agreement == TRUE, NA_integer_, .[[1]])) %>% 
+                                       select(consensus, contains("decision"), contains("reason"), no_agreement, title, abstract, everything())
             )
         )
     )
