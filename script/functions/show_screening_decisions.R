@@ -12,7 +12,6 @@ show_screening_decisions <- function(articles)
     stopifnot(has_name(articles, c("name","decision")))
     
     articles %>% 
-        filter(!is.na(decision)) %>% 
         mutate(decision = decision %>% as.integer()) %>% 
         count(name, decision) %>%
         group_by(name) %>% 
