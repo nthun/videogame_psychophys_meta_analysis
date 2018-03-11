@@ -2,6 +2,8 @@
 library(tidyverse)
 library(openxlsx)
 
+source("script/functions/make_id.R")
+setwd("d:/Documents/GitHub/videogame_psychophys_meta_analysis/")
 
 # Read all data sources ---------------------------------------------------
 scopus <- read_csv("screening_data/scopus_raw.csv") %>% 
@@ -58,7 +60,7 @@ psycinfo_dt <-
            abstract
     )
     
-
+# write_csv(psycinfo_dt, "screening_data/psychinfo_all.csv")
 
 
 anderson2010 <- read_csv("screening_data/anderson2010.csv")
@@ -66,11 +68,12 @@ nagy2015 <- read_csv("screening_data/nagy2015.csv")
 
 # Merging and duplicate removal -------------------------------------------
 # Removing duplicates based on title, doi, pmid
-merged_records <-
+# clean_records <-
+temp <- 
     bind_rows(scopus, 
               pubmed, 
               proquest_dt, 
-              psycinfo_dt,
+              # psycinfo_dt,
               anderson2010,
               nagy2015) %>% 
     mutate(title = title %>% str_to_title()) %>% 
@@ -79,20 +82,11 @@ merged_records <-
             duplicated(pmid, incomparables = NA) |
             duplicated(title, incomparables = NA))
            ) %>%
+    # Select the best identifier and keep only that
+    make_id(.,
+            identifier = c("doi","pmid","psyid","eid","pq_id","no_id")) %>% 
     arrange(title)
-    
-# Create an identifier hierarchy and keep only the best --------------------
-id_hierarchy <- tibble(identifier = c("doi","pmid","psyid","eid","pq_id","no_id"),
-                       id_rank = c(1, 2, 3, 4, 5, 6))
 
-clean_records <-
-    merged_records %>% 
-    gather(identifier, id, id_hierarchy$identifier) %>%
-    drop_na(id) %>% 
-    left_join(id_hierarchy, by = "identifier") %>% 
-    group_by(title) %>%
-    mutate(best_id = min(id_rank)) %>% 
-    ungroup() %>%
-    filter(id_rank == best_id) %>% 
-    select(-id_rank, -best_id) %>% 
-    select(identifier, id, source, everything())
+temp %>% count(identifier)
+    
+

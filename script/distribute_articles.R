@@ -1,28 +1,35 @@
 # Prepare screening
 library(tidyverse)
+library(googlesheets)
 library(glue)
 
 # Create team -------------------------------------------------------------
-team <- tibble(name = c("Andreas", "Ali", "Lydia", "Tamas"),
-               effort = c(.25,.25,.25,.25))
+# Download the team info sheet
+team_df <- gs_key("14DNNS7BCDA18Q9EgT6TlkeSSIR6JZINlxJSyTxV94xg") %>% 
+    gs_read(1)
 
-
-# Assign articles reproducibly --------------------------------------------
-set.seed(1)
 article_assign <-
-    clean_records %>% 
-    rowwise() %>%
-    mutate(reviewer1 = sample(team$name, size = 1, prob = team$effort)) %>% 
-    mutate(reviewer2 = sample(team$name[team$name != reviewer1], size = 1, prob = team$effort[team$name != reviewer1])) %>%
-    gather(position, reviewer, reviewer1:reviewer2) %>% 
-    mutate(decision = "") %>% 
-    select(decision, title, abstract, everything()) %>% 
-    group_by(reviewer) %>%
-    mutate(name = reviewer) %>% 
+    merged_records %>% 
+    assign_articles(., team_df, 1) %>% 
+    group_by(reviewer) %>% 
     nest()
 
-walk2(article_assign$reviewer, article_assign$data, ~write_csv(.y, glue("screening/{.x}_articles.csv", na = "")))
+# Save articles 
+dir.create("temp_screening")
+walk2(article_assign$reviewer, article_assign$data, ~write_csv(.y, glue("temp_screening/{.x}_articles.csv", na = "")))
 
 
 # TODO: Write a re-assign function for the records that are not yet rated
+
+library(googlesheets)
+
+tempdir <- "temp_gs"
+gs_key(i) %>% 
+    gs_download(from = ., ws = 1, to = paste(tempdir, i, sep = "/"), overwrite = TRUE)
+
+
+
+old_sheets <- df
+
+
 

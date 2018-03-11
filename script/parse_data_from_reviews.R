@@ -23,8 +23,6 @@ anderson2010 <-
     select(source, doi, pmid, no_id, title, journal, year, type, authors, abstract) %>% 
     mutate_if(is.character, trimws)
 
-
-
 write_csv(anderson2010, "screening_data/anderson2010.csv")
 
 # Nagy 2016 data ----------------------------------------------------------
