@@ -1,0 +1,93 @@
+---
+title: "Analysis report for 'Acute psychophysiological and subjective emotional effects of video gaming: a meta-analysis' "
+output: html_notebook
+---
+
+```{r}
+
+```
+
+
+# Screening process
+<!-- Data collection results -->
+<!-- Screening results -->
+<!-- Fulltext available results -->
+<!-- Data available -->
+
+
+# Exploratory data analysis
+## Included studies
+###Number of studies
+###Year of publication
+###Type of publication
+###Number of effect sizes
+###Study design
+
+## Participants
+###Number of participants
+###Age group of participants
+###Proportion of females
+###Proportion of non-caucasians
+###Proportion of obese participants
+
+## Games
+###Number of included games
+###Year of first publication
+###Included genres
+###Included ESRB rating
+###Include ESRB content descriptors
+###Violent games vs. non-violent games
+###Gaming modes (AR-VR / Exergames / Handheld games)
+###Adapted games
+
+# Outcome measures
+###Number of psychophysiological measures
+###Number of subjective measures
+###Subjective measures / Psychological scales
+### Outcome measures included in the analyses (more than 5 es-es)
+###Number of measurement points (separately for phys and subjective measurements)
+
+-----------------------------------------
+
+# Publication bias
+## Funnel plots
+## Egger tests
+## Rank correlations
+## Trim-and-fill
+
+-----------------------------------------
+# Main analysis - Overall effect on each outcome measure
+
+## Physiological outcomes
+### Effect of time
+
+## Subjective outcomes
+### Effect of time?
+
+-----------------------------------------
+# Moderation analyses
+## Physiological outcomes
+### Participant characteristics: age group, female%, non-caucasian%, overweight%, 
+### Context: place, timing, game length, players, opponent, competition
+### Game characteristics: year of game release, genre, adaptation, ESRB rating, ESRB content descriptors, violence, game modes
+
+## Subjective outcomes
+### Participant characteristics: age group, female%, non-caucasian%, overweight%, 
+### Context: place, timing, game length, players, opponent, competition
+### Game characteristics: year of game release, genre, adaptation, ESRB rating, ESRB content descriptors, violence, game modes
+
+-----------------------------------------
+# Sensitivity analyses
+## Physiological outcomes
+### Effect of study quality
+### Effect of imprecise inference
+### Effect of publication year, type of study, and study design
+### Effect of outliers
+
+## Subjective outcomes
+### Effect of study quality
+### Effect of imprecise inference
+### Effect of publication year, type of study, and study design
+### Effect of outliers
+
+
