@@ -17,9 +17,6 @@ articles <-
     articles %>% 
     filter(fulltext == 1)
 
-team_df
-
-
 set.seed(180311)
 temp <-
 articles %>% 

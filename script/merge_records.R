@@ -1,6 +1,6 @@
 # Merge records, remove duplicates
 library(tidyverse)
-library(openxlsx)
+library(readxl)
 
 source("script/functions/make_id.R")
 setwd("d:/Documents/GitHub/videogame_psychophys_meta_analysis/")
@@ -20,7 +20,7 @@ scopus <- read_csv("screening_data/scopus_raw.csv") %>%
            type = `Document Type`
            )
 
-pubmed <- read.xlsx("screening_data/pubmed_raw.xlsx", 1) %>% 
+pubmed <- read_excel("screening_data/pubmed_raw.xlsx", 1) %>% 
             as_tibble() %>% 
             select(source,
                    doi,
@@ -69,7 +69,7 @@ nagy2015 <- read_csv("screening_data/nagy2015.csv")
 # Merging and duplicate removal -------------------------------------------
 # Removing duplicates based on title, doi, pmid
 # clean_records <-
-temp <- 
+merged_records <- 
     bind_rows(scopus, 
               pubmed, 
               proquest_dt, 
@@ -83,8 +83,7 @@ temp <-
             duplicated(title, incomparables = NA))
            ) %>%
     # Select the best identifier and keep only that
-    make_id(.,
-            identifier = c("doi","pmid","psyid","eid","pq_id","no_id")) %>% 
+    make_id(identifier = c("doi","pmid","psyid","eid","pq_id","no_id")) %>% 
     arrange(title)
 
 temp %>% count(identifier)

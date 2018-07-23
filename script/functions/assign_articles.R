@@ -12,7 +12,7 @@ library(tibble)
 
 assign_articles <- function(articles, team_df, seed = 1){
     stopifnot(has_name(articles, c("title", "abstract")),
-              has_name(new_team_df, c("name","effort")),
+              has_name(team_df, c("name","effort")),
               is.numeric(seed),
               sum(team_df$effort) == 1)
 
@@ -24,10 +24,6 @@ assign_articles <- function(articles, team_df, seed = 1){
         mutate(reviewer1 = sample(team_df$name, size = 1, prob = team_df$effort)) %>%
         mutate(reviewer2 = sample(team_df$name[team_df$name != reviewer1], size = 1, prob = team_df$effort[team_df$name != reviewer1])) %>%
         gather(position, reviewer, reviewer1:reviewer2) %>%
-        # Add columns for the manual screening
-        mutate(decision = NA_character_,
-               reason = NA_character_) %>%
-        select(decision, reason, title, abstract, everything()) %>%
         group_by(reviewer) %>%
         # Duplicate the reviewer variable, to keep name in df even after nesting
         mutate(name = reviewer) %>%

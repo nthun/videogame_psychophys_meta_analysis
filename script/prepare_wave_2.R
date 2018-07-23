@@ -116,7 +116,6 @@ articles %>%
         name
     ) %>%
     mutate(reviewer = name) %>%
-    # drop_na(measurement_game) %>% 
     save_locally(local_path, postfix = "extract_2", overwrite = TRUE)
 
 # Upload it to gdrive (existing files will be overwritten!!!!)
