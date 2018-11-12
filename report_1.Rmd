@@ -1,12 +1,83 @@
 ---
 title: "Analysis report for 'Acute psychophysiological and subjective emotional effects of video gaming: a meta-analysis' "
-output: html_notebook
+output:
+  html_notebook:
+    toc: true
+    toc_depth: 3
+    toc_float:
+      collapsed: true
+      smooth_scroll: true
+editor_options: 
+  chunk_output_type: consol
 ---
 
-```{r}
+```{r include=FALSE}
+library(tidyverse)
+library(googlesheets)
+library(metamanager)
+# source("script/functions/get_from_gdrive.R")
+source("script/functions/es_helpers.R")
+# source("script/functions/verify_sheets.R")
+source("script/add_age_groups.R")
+
+wave2_path <- "Research/Video game psychophysiology meta/Data extraction/Wave 2/"
+```
+
+
+```{r, include=FALSE}
+# Get and clean data
+articles <- 
+    get_from_gdrive(wave2_path, all_char = TRUE) %>% 
+    # Drop empty rows
+    mutate(sheet = map(sheet, ~drop_na(.x, id)))
+
+game_table <- 
+    gs_key("1JVUPh1YxAnCmF2LWhTo9Qb7thDO_WsSaq3PufYjw_90") %>% 
+    gs_read(1)
+
+cleaned <- 
+    articles %>%    
+    filter(file %in% c("Kristoffer_extract_2.csv", "Zoli_extract_2.csv", "Lydia_extract_2.csv", "Tamas_extract_2.csv")) %>% 
+    unnest() %>% 
+    # Keep only non-excluded files
+    filter(is.na(exclude_reason)) %>% 
+    add_age_groups() %>% 
+    # Transform columns
+    mutate_at(vars(year, context_length, measurement_n), funs(as.integer)) %>% 
+    mutate_at(vars(`subsample_female%`, `subsample_non-caucasian%`, `subsample_overweigh%`, measurement_timing, measurement_mean, measurement_sd, measurement_corr, measurement_change_stat_value), funs(as.double))
 
 ```
 
+
+```{r include=FALSE}
+# Create datasets for easy counting
+# Keep only one row per study
+counting_article <-
+    cleaned %>%     
+    distinct(id, .keep_all = TRUE)
+
+# Keep only one row per subsample
+counting_subs <-
+    cleaned %>%     
+    distinct(id, subsample_id, .keep_all = TRUE)
+
+# Keep all independent effect sizes
+counting_es <-
+    cleaned %>% 
+    distinct(id, subsample_id, measurement_outcome, measurement_game, 
+             .keep_all = TRUE)
+
+
+games <-
+    cleaned %>% 
+    left_join(game_table, by = c("measurement_game" = "game_title")) %>% 
+    select(id, year, contains("game")) %>% 
+    # Replace NAs with 0s for dummy vars
+    mutate_at(vars(game_adaptation:game_handheld), funs(if_else(is.na(.), 0L, .))) %>% 
+    # Add game_violence based on ESRB content descriptors
+    mutate(game_violence = str_detect(game_esrb_descriptors, "Violence"))
+
+```
 
 # Screening process
 <!-- Data collection results -->
@@ -18,34 +89,298 @@ output: html_notebook
 # Exploratory data analysis
 ## Included studies
 ###Number of studies
+```{r}
+# Number of included articles
+nrow(counting_article)
+```
 ###Year of publication
+```{r}
+# Articles by year
+count(counting_article, year)
+# Plot
+count(counting_article, year) %>% 
+    ggplot() +
+    aes(x = year, y = n, label = n) +
+    scale_x_continuous(breaks = scales::pretty_breaks(n = 7)) +
+    geom_point(size = 8, color = "red") +
+    geom_linerange(aes(ymin = 0, ymax = n), color = "red") +
+    geom_text(color = "white")
+```
+
+### Number of subsamples
+```{r}
+nrow(counting_subs)
+```
+
+
 ###Type of publication
 ###Number of effect sizes
-###Study design
+```{r}
+nrow(counting_es)
+```
+###Type of effect size
+```{r}
+counting_subs %>% 
+    count(study_design)
+
+```
 
 ## Participants
-###Number of participants
-###Age group of participants
-###Proportion of females
-###Proportion of non-caucasians
-###Proportion of obese participants
+###Aggregated sample size
+```{r}
+all_participants <- sum(counting_subs$measurement_n, na.rm = TRUE)
+all_participants
+
+counting_subs %>% 
+    ggplot() +
+    aes(x = measurement_n) +
+    geom_histogram(bins = 30) +
+    scale_x_log10()
+
+```
+
+###Age group of participants by subgroup
+```{r}
+counting_subs %>% 
+    group_by(age_group) %>% 
+    summarise(subsamples = n(),
+              aggregated_n = sum(measurement_n, na.rm = TRUE)) %>% 
+    arrange(-subsamples)
+```
+
+###Proportion of females,  non-caucasians, and overwheight participants by subsample (weighted)
+```{r}
+# Weighted sample stats 
+counting_subs %>%
+    select(id, subsample_id, `subsample_female%`:`subsample_overweigh%`, measurement_n) %>%
+    set_names(str_replace(names(.), "subsample_(.*)%$", "\\1")) %>% 
+    # Calculate weighted frequencies
+    mutate_at(vars(female:overweigh), funs(magrittr::multiply_by(., measurement_n))) %>% 
+    # Calculate weighted proportions
+    summarise_at(vars(female:overweigh),
+                 funs(n = sum(., na.rm = TRUE), `%` = magrittr::divide_by(sum(., na.rm = TRUE), all_participants))) %>%
+    gather(sample_property, value)
+```
 
 ## Games
 ###Number of included games
+
+```{r}
+cleaned %>% 
+    filter(!duplicated(measurement_game)) %>% 
+    nrow()
+```
+
 ###Year of first publication
+```{r}
+games %>% 
+    distinct(measurement_game, .keep_all = TRUE) %>% 
+    count(game_year, sort = TRUE)
+
+games %>% 
+    distinct(measurement_game, .keep_all = TRUE) %>% 
+    group_by(game_year) %>% 
+    count() %>% 
+    ggplot() +
+    aes(x = game_year, y = n, label = n) +
+    scale_x_continuous(breaks = scales::pretty_breaks(n = 7)) +
+    geom_col() +
+    geom_text(nudge_y = .6) +
+    coord_cartesian(ylim = c(0, 7)) +
+    ggtitle("The year of game previews used in the studies")
+
+games %>% 
+    distinct(id, measurement_game, .keep_all = TRUE) %>% 
+    transmute(measurement_game, year, game_year, gap_year = year - game_year) %>% 
+    ggplot() +
+    aes(x = year, y = gap_year, label = measurement_game) +
+    geom_point() +
+    ggrepel::geom_text_repel() +
+    ggtitle("Difference between the study publication year and the game preview")
+
+games %>% 
+    distinct(id, measurement_game, .keep_all = TRUE) %>% 
+    transmute(year, game_year, gap_year = year - game_year) %>% 
+    summarise(mean = mean(gap_year, na.rm = TRUE))
+
+# TODO: Create a plot that shows the number of games by year weighted by study number
+
+library(wordcloud2)
+cleaned %>% 
+    distinct(id, measurement_game, .keep_all = TRUE) %>% 
+    count(measurement_game, sort = TRUE) %>% 
+    wordcloud2()
+    
+
+```
+
+
 ###Included genres
+```{r}
+games %>% 
+    distinct(measurement_game, .keep_all = TRUE) %>% 
+    separate_rows(game_genre, sep = "; ") %>% 
+    group_by(game_genre) %>% 
+    count(sort = TRUE)
+```
+
 ###Included ESRB rating
+```{r}
+games %>% 
+    distinct(measurement_game, .keep_all = TRUE) %>% 
+    group_by(game_esrb_rating) %>% 
+    count()
+```
+
 ###Include ESRB content descriptors
+```{r}
+games %>% 
+    distinct(measurement_game, .keep_all = TRUE) %>% 
+    separate_rows(game_esrb_descriptors, sep = ", ") %>% 
+    group_by(game_esrb_descriptors) %>% 
+    count(sort = TRUE) %>% 
+    print(n = 100)
+
+games %>% 
+    distinct(measurement_game, .keep_all = TRUE) %>% 
+    separate_rows(game_esrb_descriptors, sep = ", ") %>% 
+    group_by(game_esrb_descriptors) %>% 
+    count() %>% 
+    ungroup() %>% 
+    mutate(game_esrb_descriptors = factor(game_esrb_descriptors)) %>% 
+    ggplot() +
+        aes(y = n, x = fct_rev(game_esrb_descriptors), label = n) +
+        geom_col() +
+        scale_y_continuous(breaks = scales::pretty_breaks()) +
+        labs(x = NULL, title = "ESRB content descriptors in the games", y = "Number of games") +
+        geom_text(aes(y = 0.2)) +
+        # Keep the NA-s in the plot to show how many games did not have cont descr
+        coord_flip(ylim = c(0, 10))
+
+# Content descriptors by game genres
+# TODO: Check if data is correct. Looks strange
+# TODO: Group by themes, e.g. Language and humor, Violance, Sex, Substance, Suggestive
+games %>% 
+    distinct(measurement_game, .keep_all = TRUE) %>% 
+    separate_rows(game_esrb_descriptors, sep = ", ") %>% 
+    separate_rows(game_genre, sep = "; ") %>% 
+    count(game_genre, game_esrb_descriptors, sort = TRUE) %>% 
+    mutate(game_esrb_descriptors = fct_rev(game_esrb_descriptors)) %>% 
+    drop_na() %>% 
+        ggplot() +
+        aes(x = game_genre, y = game_esrb_descriptors, size = n) +
+        geom_count() +
+        scale_x_discrete(position = "top") +
+        scale_size_continuous(breaks = round) +
+        labs(y = "ESRB content descriptor", x = NULL, size = "Number of games") +
+        theme(axis.text.x = element_text(angle = 30))
+```
+
 ###Violent games vs. non-violent games
+```{r}
+games %>% 
+    distinct(measurement_game, .keep_all = TRUE) %>% 
+    mutate(game_violence = str_detect(game_esrb_descriptors, "Violence")) %>% 
+    count(game_violence)
+```
+
 ###Gaming modes (AR-VR / Exergames / Handheld games)
+```{r}
+games %>% 
+    distinct(measurement_game, .keep_all = TRUE) %>% 
+    gather(game_mode, value, game_exergame:game_handheld) %>% 
+    mutate(game_mode = str_remove(game_mode, "game_")) %>% 
+    group_by(game_mode) %>% 
+    summarise(n = sum(value))
+```
+
 ###Adapted games
+```{r}
+games %>% 
+    distinct(measurement_game, .keep_all = TRUE) %>% 
+    group_by(game_adaptation) %>% 
+    count()
+```
 
 # Outcome measures
+```{r}
+# Categorization of outome measures
+# Phsysiological measures
+om_hr <- c("heart rate","pulse rate")
+om_sym <- c("epinephrine","norepinephrine","left ventricular ejection time",
+             "systolic blood pressure","diastolic blood pressure","mean arterial pressure",
+             "skin conductance","Skin conductance", "eda positive change")
+om_para <- c("high frequency hrv","rmssd")
+om_horm <- c("cortisol","testosterone","dopamine")
+om_other_phys <- c("pulse transit time","pulse pressure","diastolic function","stroke volume","cardiac index","heather index","mean systolic ejection rate","stroke volume index","total systemic resistance","vascular rigidity index","respiratory rate","cardiac contractility response","rate pressure product", "respiratory exchange ratio","qtc/qs2","low frequency hrv / high frequency hrv","low frequency hrv","very low frequency hrv","cardiac output","total peripheral resistance")
+om_all_phys <- c(om_hr, om_sym, om_para, om_horm, om_other_phys)
+om_temp_phys <- c(om_hr, om_sym, om_para)
+
+# Psychological measures
+om_stress <- c("anxiety","upset", "stress","tension")
+om_joy <- c("happiness","enjoyment","pleasure")
+om_eng <- c("involvement","flow","engagement")
+om_arousal <- c("excitement","arousal","vigor")
+om_anger <- c("anger","aggression","physical aggression","verbal aggression")
+om_other_psy <- c("annoyance","embarrassment","frustration","sadness","negative affect","positive affect","liking","valence","dissatisfaction","relaxation","confusion","depression","fatigue")
+om_all_psy <- c(om_stress, om_joy, om_eng, om_arousal, om_anger, om_other_psy)
+om_temp_psy <- c(om_stress, om_joy)
+
+aggregated_outcomes <- read_csv("data_extaction/supplementary_data/aggregated_outcomes.csv")
+```
+
+
 ###Number of psychophysiological measures
+```{r paged.print=TRUE}
+# counting_es %>% 
+#     distinct(id, measurement_outcome, .keep_all = TRUE) %>% 
+#     filter(measurement_outcome %in% om_all_phys) %>% 
+#     group_by(measurement_outcome) %>% 
+#     summarise(subsamples = n(),
+#               aggregated_n = sum(measurement_n, na.rm = TRUE)) %>% 
+#     
+#     arrange(-subsamples)
+
+counting_es %>% 
+    distinct(id,  measurement_game, measurement_outcome, .keep_all = TRUE) %>% 
+    right_join(aggregated_outcomes, by = "measurement_outcome") %>% 
+    filter(domain == "physiological") %>% 
+    group_by(aggregated_outcome) %>% 
+    summarise(subsamples = n(),
+              aggregated_n = sum(measurement_n, na.rm = TRUE)) %>% 
+    arrange(-subsamples)
+```
+
+
 ###Number of subjective measures
-###Subjective measures / Psychological scales
-### Outcome measures included in the analyses (more than 5 es-es)
+
+```{r}
+# counting_es %>% 
+#     distinct(id, measurement_outcome, .keep_all = TRUE) %>% 
+#     filter(measurement_outcome %in% om_all_psy) %>% 
+#     group_by(measurement_outcome) %>% 
+#     summarise(subsamples = n(),
+#               aggregated_n = sum(measurement_n, na.rm = TRUE)) %>% 
+#     arrange(-subsamples)
+
+counting_es %>% 
+    distinct(id, measurement_game, measurement_outcome, .keep_all = TRUE) %>% 
+    right_join(aggregated_outcomes, by = "measurement_outcome") %>% 
+    filter(domain == "psychological") %>% 
+    group_by(aggregated_outcome) %>% 
+    summarise(subsamples = n(),
+              aggregated_n = sum(measurement_n, na.rm = TRUE)) %>% 
+    arrange(-subsamples)
+```
+
+
+###Outcome measures included in the analyses (more than 5 es-es)
 ###Number of measurement points (separately for phys and subjective measurements)
+
+-----------------------------------------
+# Calculating the effect sizes
+## Number of studies with accurate 
+
 
 -----------------------------------------
 
