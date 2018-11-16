@@ -1,13 +1,13 @@
 ---
-title: "Analysis report for 'Acute psychophysiological and subjective emotional effects of video gaming: a meta-analysis' "
+title: "A meta-analysis for psychophysiological and emotional effects of video gaming"
 output:
-  html_notebook:
-    toc: true
+  html_document:
+    toc: yes
     toc_depth: 3
     toc_float:
-      collapsed: true
-      smooth_scroll: true
-editor_options: 
+      collapsed: yes
+      smooth_scroll: yes
+editor_options:
   chunk_output_type: console
 ---
 
@@ -24,7 +24,7 @@ wave2_path <- "Research/Video game psychophysiology meta/Data extraction/Wave 2/
 ```
 
 
-```{r, include=FALSE}
+```{r, include=FALSE, cache= TRUE}
 # Get and clean data
 articles <- 
     get_from_gdrive(wave2_path, all_char = TRUE) %>% 
@@ -37,14 +37,15 @@ game_table <-
 
 cleaned <- 
     articles %>%    
-    filter(file %in% c("Kristoffer_extract_2.csv", "Zoli_extract_2.csv", "Lydia_extract_2.csv", "Tamas_extract_2.csv")) %>% 
+    filter(file %in% c("Kristoffer_extract_2.csv", "Zoli_extract_2.csv", "Lydia_extract_2.csv", "Tamas_extract_2.csv", "Marcell_extract_2.csv")) %>% 
     unnest() %>% 
     # Keep only non-excluded files
     filter(is.na(exclude_reason)) %>% 
     add_age_groups() %>% 
     # Transform columns
     mutate_at(vars(year, context_length, measurement_n), funs(as.integer)) %>% 
-    mutate_at(vars(`subsample_female%`, `subsample_non-caucasian%`, `subsample_overweigh%`, measurement_timing, measurement_mean, measurement_sd, measurement_corr, measurement_change_stat_value), funs(as.double))
+    mutate_at(vars(`subsample_female%`, `subsample_non-caucasian%`, `subsample_overweigh%`, measurement_timing, measurement_mean, measurement_sd, measurement_corr, measurement_change_stat_value), funs(as.double)) %>% 
+    mutate(during_game = if_else(measurement_timing < context_length, TRUE, FALSE, missing = NA))
 
 ```
 
@@ -155,11 +156,15 @@ counting_subs %>%
     select(id, subsample_id, `subsample_female%`:`subsample_overweigh%`, measurement_n) %>%
     set_names(str_replace(names(.), "subsample_(.*)%$", "\\1")) %>% 
     # Calculate weighted frequencies
-    mutate_at(vars(female:overweigh), funs(magrittr::multiply_by(., measurement_n))) %>% 
+    mutate_at(vars(female:overweigh), funs(`*`(., measurement_n))) %>% 
     # Calculate weighted proportions
     summarise_at(vars(female:overweigh),
-                 funs(n = sum(., na.rm = TRUE), `%` = magrittr::divide_by(sum(., na.rm = TRUE), all_participants))) %>%
-    gather(sample_property, value)
+                 funs(N = sum(., na.rm = TRUE), 
+                      `%` = magrittr::divide_by(sum(., na.rm = TRUE), all_participants))) %>%
+    gather(sample_property, value) %>% 
+    separate(sample_property, c("sample", "property"), sep = "_") %>% 
+    spread(property, value) %>% 
+    mutate(`%` = `%` * 100)
 ```
 
 ## Games
