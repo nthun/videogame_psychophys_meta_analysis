@@ -15,6 +15,8 @@ editor_options:
 library(tidyverse)
 library(googlesheets)
 library(metamanager)
+library(metafor)
+library(metaviz)
 # source("script/functions/get_from_gdrive.R")
 source("script/functions/es_helpers.R")
 # source("script/functions/verify_sheets.R")
@@ -72,7 +74,7 @@ counting_es <-
 games <-
     cleaned %>% 
     left_join(game_table, by = c("measurement_game" = "game_title")) %>% 
-    select(id, year, contains("game")) %>% 
+    select(id, year, measurement_game, starts_with("game")) %>% 
     # Replace NAs with 0s for dummy vars
     mutate_at(vars(game_adaptation:game_handheld), funs(if_else(is.na(.), 0L, .))) %>% 
     # Add game_violence based on ESRB content descriptors
@@ -376,6 +378,230 @@ counting_es %>%
     summarise(subsamples = n(),
               aggregated_n = sum(measurement_n, na.rm = TRUE)) %>% 
     arrange(-subsamples)
+```
+
+# Creating data table for analysis
+```{r}
+average_stats <-
+    cleaned %>% 
+    filter(!measurement_point == "change from baseline") %>% 
+    select(id, study_design, measurement_outcome, measurement_point, measurement_mean, measurement_sd, measurement_corr) %>% 
+    group_by(measurement_outcome) %>% 
+    summarize(measurement_mean = mean(measurement_mean, na.rm = TRUE),
+              measurement_sd = mean(measurement_sd, na.rm = TRUE),
+              measurement_corr = mean(measurement_corr, na.rm = TRUE),
+              n = n()) %>% 
+    print(n = 50)
+
+average_r <- 
+    average_stats %>% 
+    select(measurement_outcome,
+           r = measurement_corr) %>% 
+    drop_na(r)    
+
+
+# Between subjects effects
+between_effects <-
+    cleaned %>% 
+    filter(study_design == "between") %>% 
+    group_by(file, id, subsample_id, measurement_game, measurement_outcome) %>% 
+    arrange(measurement_point, .by_group = TRUE) %>% 
+    mutate(bl_mean = first(measurement_mean),
+           bl_sd = first(measurement_sd),
+           bl_n = first(measurement_n)) %>% 
+    slice(2:n()) %>% 
+    ungroup %>% 
+    mutate(d = mean2d_bw(m1 = bl_mean, 
+                      m2 = measurement_mean, 
+                      sd1 = bl_sd, 
+                      sd2 = measurement_sd),
+           g = d2g(d, measurement_n),
+           g_var = gvar_bw(g = g, n1 = bl_n, n2 = measurement_n)
+    )
+
+
+# Within subject ES
+within_effects <-
+    cleaned %>% 
+    filter(study_design == "within" & str_detect(measurement_point, "^\\d")) %>% 
+    left_join(average_r, by = "measurement_outcome") %>% 
+    group_by(file, id, subsample_id, measurement_game, measurement_outcome) %>% 
+    arrange(measurement_point, .by_group = TRUE) %>% 
+    mutate(bl_mean = first(measurement_mean),
+           bl_sd = first(measurement_sd),
+           bl_n = first(measurement_n)) %>% 
+    slice(2:n()) %>%
+    mutate(r = if_else(is.na(r), .5, r),
+           d = mean2d(m1 = bl_mean, 
+                      m2 = measurement_mean, 
+                      sd1 = bl_sd, 
+                      sd2 = measurement_sd, 
+                      n1 = bl_n, 
+                      n2 = measurement_n, r),
+           g = d2g(d, measurement_n),
+           g_var = gvar(g, measurement_n, r)
+) %>% 
+    ungroup()
+
+# Between subject ES
+
+# ES calculation for change statistics
+change_effects <-
+    cleaned %>% 
+    filter(study_design == "within" & measurement_point == "change from baseline") %>%
+    left_join(average_r, by = "measurement_outcome") %>% 
+           # If there is no info about the correletion for a measure, use .5
+    mutate(r = if_else(is.na(r), .5, r),
+           # First fill the appropriate variables with the extracted values
+           t = if_else(measurement_change_stat_type == "t", 
+                       measurement_change_stat_value, NA_real_),
+           d = if_else(measurement_change_stat_type == "d", 
+                       measurement_change_stat_value, NA_real_),
+           z = if_else(measurement_change_stat_type == "z", 
+                       measurement_change_stat_value, NA_real_),
+           p = if_else(measurement_change_stat_type == "p", 
+                       measurement_change_stat_value, NA_real_),
+           # Calculate d based on stats
+           d = case_when(!is.na(p) ~ p2t(p = p, n = measurement_n),
+                         !is.na(z) ~ z2d(z = z, n = measurement_n), 
+                         !is.na(t) ~ t2d_rm(t = t, n = measurement_n, r = r), 
+                         # Use the change means and sds to calculate d
+                         is.na(measurement_change_stat_type) ~ 
+                             mean2dz(md = measurement_mean, sdd = measurement_sd),
+                         TRUE ~ d),
+           # Calculate g 
+            g = d2g(d = d, n = measurement_n),
+            g_var = gvar(g = g, n = measurement_n, r = r))
+
+all_effects <-
+    bind_rows(change_effects,
+          between_effects,
+          within_effects) %>% 
+    select(-starts_with("bl_")) %>% 
+    left_join(game_table, by = c("measurement_game" = "game_title")) 
+```
+
+---------------
+
+# Kristoffer's part
+
+Calculating the effect sizes for each study and game. 
+We set the baseline as Puzzle games
+```{r message=FALSE, warning=FALSE}
+all_effects %>% 
+    separate_rows(game_genre, sep = "; ") %>%
+    distinct(id, measurement_game, .keep_all = TRUE) %>% 
+    count(game_genre)
+
+hr_effects <-
+    all_effects %>%
+    filter(measurement_outcome %in% om_hr,
+          !str_detect(authors, "Barry "), # This one seems wrong
+           during_game == TRUE) %>%
+    separate_rows(game_genre, sep = "; ") %>%
+    rowwise() %>% 
+    mutate(first_author = str_extract(authors, "([^\\s,]+)") %>% 
+               str_glue(", {year}")
+    ) %>% 
+    group_by(first_author, year, id, measurement_game, game_genre) %>% 
+    summarise(N = first(measurement_n),
+              g = mean(g),
+              g_var = mean(g_var),
+              se = sqrt(g_var)/sqrt(N)) %>% 
+    ungroup() %>%
+    drop_na(game_genre) %>% 
+    mutate(game_genre = fct_relevel(game_genre, "Puzzle"))
+    
+hr_rma <-
+    rma.mv(yi = g, V = g_var, 
+           mods = ~ game_genre, data = hr_effects)
+
+
+hr_rma
+```
+
+## Cumulative forest plot
+```{r fig.height=8}
+
+viz_forest(hr_rma, 
+           study_labels = hr_effects$first_author, 
+           group = hr_effects$game_genre,
+           variant = "thick",
+           annotate_CI = TRUE,
+           xlab = "Hedge's g (SE)", 
+           x_limit = c(-0.5, 5),type = "cumulative"
+            
+            )
+
+```
+
+## Funnel plot
+This shows a large publication bias, therefore the results should be regarded with caution.
+```{r}
+viz_funnel(rma.mv(yi = g, V = g_var, data = hr_effects),
+           contours_col = "Greys",
+           sig_contours = TRUE
+           )
+```
+
+
+# Lydia's part
+Calculating the effect sizes for each study and game. 
+```{r message=FALSE, warning=FALSE}
+violence_effects <-
+    all_effects  %>% 
+    filter(measurement_outcome %in% om_hr,
+           !str_detect(authors, "Barry "), # Seems to be wrong
+           game_exergame == 0,
+           during_game == TRUE) %>%
+    mutate(game_violence = str_detect(game_esrb_descriptors, "Violen") %>% 
+                           if_else(is.na(.), FALSE, .)) %>% 
+    rowwise() %>% 
+    mutate(first_author = str_extract(authors, "([^\\s,]+)") %>% 
+                          str_glue(", {year}")) %>% 
+    group_by(first_author, year, id, measurement_game, game_violence) %>% 
+    summarise(N = first(measurement_n),
+              g = mean(g),
+              g_var = mean(g_var),
+              se = sqrt(g_var)/sqrt(N)) %>% 
+    ungroup()
+
+violence_effects %>% 
+    count(measurement_game, game_violence, sort = TRUE) %>% 
+    print(n = 100)
+
+violence_effects %>% 
+    count(game_violence)
+    
+violence_rma <-
+    violence_effects %>% 
+    rma.mv(yi = g, V = g_var, 
+           mods = ~ game_violence, data = .)
+
+
+```
+
+# Forest plot
+```{r fig.height=7}
+
+viz_forest(violence_rma, 
+           study_labels = violence_effects$first_author, 
+           group = violence_effects$game_violence,
+           # variant = "thick",
+           annotate_CI = TRUE,
+           xlab = "Hedge's g (SE)"
+           
+)
+
+```
+
+# Funnel plot
+The funnel plot shows publication bias, therefore the resuls should be interpreted with caution.
+```{r}
+viz_funnel(rma.mv(yi = g, V = g_var, data = violence_effects),
+           contours_col = "Greys",
+           sig_contours = TRUE
+)
 ```
 
 
